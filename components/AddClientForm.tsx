@@ -15,6 +15,7 @@ const AddClientForm: React.FC<AddClientFormProps> = ({ onAddClient, onClose, pro
     surname: '',
     address: '',
     email: '',
+    phone: '',
     companyName: '',
     vatNumber: '',
     iban: '',
@@ -52,6 +53,7 @@ const AddClientForm: React.FC<AddClientFormProps> = ({ onAddClient, onClose, pro
       name,
       surname,
       email,
+      phone: formData.phone,
       address,
       companyName: formData.companyName,
       vatNumber: formData.vatNumber,
@@ -96,6 +98,7 @@ const AddClientForm: React.FC<AddClientFormProps> = ({ onAddClient, onClose, pro
                 <input type="text" name="name" placeholder="Nome *" value={formData.name} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
                 <input type="text" name="surname" placeholder="Cognome *" value={formData.surname} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
                 <input type="email" name="email" placeholder="Email Diretta *" value={formData.email} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
+                <input type="tel" name="phone" placeholder="Telefono" value={formData.phone} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
                 <input type="text" name="address" placeholder="Indirizzo Completo *" value={formData.address} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
               </div>
             </div>

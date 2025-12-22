@@ -13,6 +13,7 @@ export interface Client {
   vatNumber?: string;
   address: string;
   email: string;
+  phone?: string;
   iban: string;
   otherInfo: string;
   subscription: Subscription;
