@@ -19,100 +19,108 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
     setError(null);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        alert('Registrazione completata! Controlla la tua email per il link di conferma (se abilitato).');
-      }
+      const { error: authError } = isLogin 
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({ email, password });
+
+      if (authError) throw authError;
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'Si è verificato un errore durante l\'autenticazione.');
+      console.error('Auth error:', err);
+      let msg = err.message || 'Errore di autenticazione.';
+      if (msg.includes('Failed to fetch') || msg.includes('Invalid API key')) {
+        msg = 'Errore di configurazione del server (Chiave API non valida). Contatta l\'amministratore.';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-12">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-3xl shadow-2xl">
-        <div>
-          <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/50">
-            <span className="text-white font-bold text-2xl">C</span>
+    <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4">
+      <div className="max-w-md w-full">
+        <div className="bg-white p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+          
+          <div className="mb-10 text-center">
+            <div className="mx-auto h-16 w-16 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 mb-6 rotate-3">
+              <span className="text-white font-black text-3xl">C</span>
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+              {isLogin ? 'Bentornato' : 'Inizia Ora'}
+            </h2>
+            <p className="text-slate-500 font-medium italic">
+              {isLogin ? 'Accedi al tuo CRM professionale' : 'Crea il tuo spazio di gestione'}
+            </p>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isLogin ? 'Accedi al CRM' : 'Crea un account'}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600 italic">
-            Gestisci i tuoi abbonamenti in un unico posto
-          </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg flex items-start gap-3">
-            <AlertTriangleIcon className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
+          {error && (
+            <div className="mb-8 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 animate-shake">
+              <AlertTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 font-semibold leading-snug">{error}</p>
+            </div>
+          )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleAuth}>
-          <div className="rounded-md space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <div className="relative">
+          <form className="space-y-6" onSubmit={handleAuth}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Aziendale</label>
+                <div className="relative group">
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-5 py-4 pl-12 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all group-hover:bg-slate-100"
+                    placeholder="email@azienda.it"
+                  />
+                  <MailIcon className="absolute left-4 top-4.5 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
                 <input
-                  type="email"
+                  type="password"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none rounded-xl relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="nome@esempio.it"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all group-hover:bg-slate-100"
+                  placeholder="••••••••"
+                  minLength={6}
                 />
-                <MailIcon className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-xl relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
-                minLength={6}
-              />
-            </div>
-          </div>
 
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all active:scale-95 shadow-lg ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`w-full py-5 rounded-2xl text-white font-black text-lg bg-blue-600 hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 active:scale-[0.98] ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Elaborazione...
-                </span>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>ELABORAZIONE...</span>
+                </div>
               ) : (
-                isLogin ? 'Accedi' : 'Registrati'
+                isLogin ? 'ACCEDI ORA' : 'REGISTRATI GRATIS'
               )}
             </button>
-          </div>
-        </form>
+          </form>
 
-        <div className="text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
-          >
-            {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
-          </button>
+          <div className="mt-10 text-center">
+            <button
+              onClick={() => { setIsLogin(!isLogin); setError(null); }}
+              className="text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors py-2 px-4 rounded-xl hover:bg-slate-50"
+            >
+              {isLogin ? "Non hai un account? Registrati qui" : "Hai già un account? Torna al login"}
+            </button>
+          </div>
         </div>
+        
+        <p className="mt-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest opacity-50">
+          &copy; 2024 CRM DASHBOARD PROFESSIONAL
+        </p>
       </div>
     </div>
   );
