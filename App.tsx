@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Client, Product, Seller } from './types';
 import ClientList from './components/ClientList';
 import AddClientForm from './components/AddClientForm';
@@ -10,69 +9,23 @@ import ProdottiPage from './pages/ProdottiPage';
 import VenditoriPage from './pages/VenditoriPage';
 import ReportsPage from './pages/ReportsPage';
 import BusinessPage from './pages/BusinessPage';
-import { PlusCircleIcon, DownloadIcon, UploadIcon } from './components/Icons';
+import { PlusCircleIcon, DownloadIcon, UploadIcon, AlertTriangleIcon } from './components/Icons';
 import ImportClientModal from './components/ImportClientModal';
 import ClientFilterBar from './components/ClientFilterBar';
+import Auth from './components/Auth';
+import { supabase } from './lib/supabase';
 
 type View = 'dashboard' | 'clients' | 'sellers' | 'products' | 'reports' | 'business';
 
 const App: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: '1', name: 'Mario', surname: 'Rossi', companyName: 'Rossi S.R.L', vatNumber: 'IT12345678901', address: 'Via Roma 1, 00100 Roma', email: 'mario.rossi@example.com', iban: 'IT60X0542811101000000123456', otherInfo: 'Cliente iniziale, alta priorità.',
-      subscription: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 20)).toISOString(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString(),
-      },
-      subscriptionType: 'monthly',
-      productId: 'p1', sellerId: 's1',
-    },
-    {
-      id: '2', name: 'Giulia', surname: 'Bianchi', address: 'Corso Vittorio Emanuele 10, Milano', email: 'giulia.bianchi@example.com', iban: 'IT12A0306909606100000063749', otherInfo: 'Cliente a lungo termine.',
-      subscription: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 90)).toISOString(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 80)).toISOString(),
-      },
-      subscriptionType: 'annual',
-      productId: 'p2', sellerId: 's2',
-    },
-     {
-      id: '4', name: 'Luca', surname: 'Verdi', companyName: 'Verdi Costruzioni', vatNumber: 'IT98765432109', address: 'Via Garibaldi 20, Torino', email: 'luca.verdi@example.com', iban: 'IT11A0200801694000105374827', otherInfo: 'Contratto in scadenza.',
-      subscription: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 335)).toISOString(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 25)).toISOString(),
-      },
-      subscriptionType: 'annual',
-      productId: 'p3', sellerId: 's1',
-    },
-    {
-      id: '3', name: 'Cliente', surname: 'Scaduto', address: 'Piazza Maggiore 5, Bologna', email: 'cliente.scaduto@example.com', iban: 'IT11A0200801694000105374827', otherInfo: 'Abbonamento terminato.',
-      subscription: {
-        startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
-        endDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
-      },
-      subscriptionType: 'monthly',
-       productId: 'p1', sellerId: 's2',
-    },
-    {
-      id: '5', name: 'Futuro', surname: 'Cliente', companyName: 'Startup Futura', vatNumber: 'IT00000000000', address: 'Via del Domani 1, Futuropoli', email: 'futuro.cliente@example.com', iban: 'IT00F00000000000000000000', otherInfo: 'Abbonamento non ancora attivo.',
-      subscription: {
-        startDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString(),
-        endDate: new Date(new Date().setDate(new Date().getDate() + 45)).toISOString(),
-      },
-      subscriptionType: 'trial',
-       productId: 'p2', sellerId: 's1',
-    },
-  ]);
-  const [products, setProducts] = useState<Product[]>([
-    { id: 'p1', name: 'Abbonamento Base', price: 29.99 },
-    { id: 'p2', name: 'Abbonamento Premium', price: 59.99 },
-    { id: 'p3', name: 'Abbonamento Enterprise', price: 99.99 },
-  ]);
-  const [sellers, setSellers] = useState<Seller[]>([
-    { id: 's1', name: 'Marco Neri', commissionRate: 10 },
-    { id: 's2', name: 'Laura Gialli', commissionRate: 12 },
-  ]);
+  const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
@@ -86,127 +39,207 @@ const App: React.FC = () => {
   const [filterSubscriptionType, setFilterSubscriptionType] = useState('');
   const [sortOrder, setSortOrder] = useState('expiry_desc');
 
-  const addClient = useCallback((client: Omit<Client, 'id'>) => {
-    setClients(prev => [...prev, { ...client, id: new Date().toISOString() }]);
+  // Auth monitoring
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        setClients([]);
+        setProducts([]);
+        setSellers([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    if (!session) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Note: We use try-catch to catch network errors before they hit the [object Object] console log issue
+      const [
+        { data: clientsData, error: clientsError },
+        { data: productsData, error: productsError },
+        { data: sellersData, error: sellersError }
+      ] = await Promise.all([
+        supabase.from('clients').select('*'),
+        supabase.from('products').select('*'),
+        supabase.from('sellers').select('*')
+      ]);
+
+      if (clientsError) throw new Error(`Clienti: ${clientsError.message}`);
+      if (productsError) throw new Error(`Prodotti: ${productsError.message}`);
+      if (sellersError) throw new Error(`Venditori: ${sellersError.message}`);
+
+      setClients(clientsData || []);
+      setProducts(productsData || []);
+      setSellers(sellersData || []);
+    } catch (err: any) {
+      console.error('Database connection error:', err.message || err);
+      // Detailed error for common Supabase failures
+      let msg = err.message || 'Errore imprevisto di rete';
+      if (msg.includes('Failed to fetch')) {
+        msg = 'Impossibile contattare il server Supabase. Verifica la connessione o l\'URL del progetto.';
+      } else if (msg.includes('Invalid API key')) {
+        msg = 'Chiave API non valida. Verifica la Anon Key nel file lib/supabase.ts.';
+      }
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session) {
+      fetchData();
+    }
+  }, [session, fetchData]);
+
+  const addClient = useCallback(async (client: Omit<Client, 'id'>) => {
+    const { data, error } = await supabase.from('clients').insert([client]).select();
+    if (error) {
+      alert('Errore durante il salvataggio del cliente: ' + error.message);
+    } else if (data) {
+      setClients(prev => [...prev, data[0]]);
+    }
   }, []);
   
-  const importClients = useCallback((newClients: Omit<Client, 'id'>[]) => {
-    const clientsToAdd = newClients.map(client => ({ ...client, id: `imported-${new Date().toISOString()}-${Math.random()}` }));
-    setClients(prev => [...prev, ...clientsToAdd]);
-    alert(`${clientsToAdd.length} clienti importati con successo!`);
-  }, []);
-
-  const deleteClient = useCallback((clientId: string) => {
-    setClients(prev => prev.filter(client => client.id !== clientId));
-  }, []);
-
-  const updateClient = useCallback((updatedClient: Client) => {
-    setClients(prev => prev.map(client => client.id === updatedClient.id ? updatedClient : client));
-    setEditingClient(null);
-  }, []);
-
-  const addProduct = useCallback((product: Omit<Product, 'id'>) => {
-    setProducts(prev => [...prev, { ...product, id: `p${Date.now()}` }]);
-  }, []);
-
-  const updateProduct = useCallback((updatedProduct: Product) => {
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-  }, []);
-
-  const deleteProduct = useCallback((productId: string) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo prodotto? I clienti associati non avranno più un prodotto.')) {
-      setProducts(prev => prev.filter(product => product.id !== productId));
-      // Un-assign clients from the deleted product
-      setClients(prev => prev.map(client => 
-        client.productId === productId ? { ...client, productId: undefined } : client
-      ));
+  const importClients = useCallback(async (newClients: Omit<Client, 'id'>[]) => {
+    const { data, error } = await supabase.from('clients').insert(newClients).select();
+    if (error) {
+      alert('Errore durante l\'importazione: ' + error.message);
+    } else if (data) {
+      setClients(prev => [...prev, ...data]);
+      alert(`${data.length} clienti importati con successo!`);
     }
   }, []);
 
-  const addSeller = useCallback((seller: Omit<Seller, 'id'>) => {
-    setSellers(prev => [...prev, { ...seller, id: `s${Date.now()}` }]);
-  }, []);
-
-  const deleteSeller = useCallback((sellerId: string) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo venditore? I clienti associati non avranno più un venditore.')) {
-      setSellers(prev => prev.filter(seller => seller.id !== sellerId));
-      // Un-assign clients from the deleted seller
-      setClients(prev => prev.map(client => 
-        client.sellerId === sellerId ? { ...client, sellerId: undefined } : client
-      ));
+  const deleteClient = useCallback(async (clientId: string) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questo cliente?')) return;
+    const { error } = await supabase.from('clients').delete().eq('id', clientId);
+    if (error) {
+      alert('Errore durante l\'eliminazione: ' + error.message);
+    } else {
+      setClients(prev => prev.filter(client => client.id !== clientId));
     }
   }, []);
 
-  const updateSeller = useCallback((updatedSeller: Seller) => {
-    setSellers(prev => prev.map(s => s.id === updatedSeller.id ? updatedSeller : s));
+  const updateClient = useCallback(async (updatedClient: Client) => {
+    const { error } = await supabase.from('clients').update(updatedClient).eq('id', updatedClient.id);
+    if (error) {
+      alert('Errore durante l\'aggiornamento: ' + error.message);
+    } else {
+      setClients(prev => prev.map(client => client.id === updatedClient.id ? updatedClient : client));
+      setEditingClient(null);
+    }
+  }, []);
+
+  const addProduct = useCallback(async (product: Omit<Product, 'id'>) => {
+    const { data, error } = await supabase.from('products').insert([product]).select();
+    if (error) {
+      alert('Errore: ' + error.message);
+    } else if (data) {
+      setProducts(prev => [...prev, data[0]]);
+    }
+  }, []);
+
+  const updateProduct = useCallback(async (updatedProduct: Product) => {
+    const { error } = await supabase.from('products').update(updatedProduct).eq('id', updatedProduct.id);
+    if (error) {
+      alert('Errore: ' + error.message);
+    } else {
+      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    }
+  }, []);
+
+  const deleteProduct = useCallback(async (productId: string) => {
+    if (window.confirm('Sei sicuro di voler eliminare questo prodotto?')) {
+      const { error } = await supabase.from('products').delete().eq('id', productId);
+      if (error) {
+        alert('Errore: ' + error.message);
+      } else {
+        setProducts(prev => prev.filter(product => product.id !== productId));
+        setClients(prev => prev.map(client => 
+          client.productId === productId ? { ...client, productId: undefined } : client
+        ));
+      }
+    }
+  }, []);
+
+  const addSeller = useCallback(async (seller: Omit<Seller, 'id'>) => {
+    const { data, error } = await supabase.from('sellers').insert([seller]).select();
+    if (error) {
+      alert('Errore: ' + error.message);
+    } else if (data) {
+      setSellers(prev => [...prev, data[0]]);
+    }
+  }, []);
+
+  const updateSeller = useCallback(async (updatedSeller: Seller) => {
+    const { error } = await supabase.from('sellers').update(updatedSeller).eq('id', updatedSeller.id);
+    if (error) {
+      alert('Errore: ' + error.message);
+    } else {
+      setSellers(prev => prev.map(s => s.id === updatedSeller.id ? updatedSeller : s));
+    }
+  }, []);
+
+  const deleteSeller = useCallback(async (sellerId: string) => {
+    if (window.confirm('Sei sicuro di voler eliminare questo venditore?')) {
+      const { error } = await supabase.from('sellers').delete().eq('id', sellerId);
+      if (error) {
+        alert('Errore: ' + error.message);
+      } else {
+        setSellers(prev => prev.filter(seller => seller.id !== sellerId));
+        setClients(prev => prev.map(client => 
+          client.sellerId === sellerId ? { ...client, sellerId: undefined } : client
+        ));
+      }
+    }
   }, []);
   
-  const exportToCsv = useCallback((filename: string, data: object[]) => {
-    if (!data || data.length === 0) {
-      alert('Nessun dato da esportare.');
-      return;
-    }
-
-    const headers = Object.keys(data[0]);
-    const csvRows = [headers.join(',')];
-
-    for (const row of data) {
-      const values = headers.map(header => {
-        const value = row[header as keyof typeof row];
-        const stringValue = value === null || value === undefined ? '' : String(value);
-        const escaped = stringValue.replace(/"/g, '""');
-        return `"${escaped}"`;
-      });
-      csvRows.push(values.join(','));
-    }
-
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, []);
-
   const handleExportClients = useCallback(() => {
+    // CSV Export logic
     const sortedClients = [...clients].sort((a, b) => new Date(a.subscription.endDate).getTime() - new Date(b.subscription.endDate).getTime());
-    
     const dataToExport = sortedClients.map(client => {
       const product = products.find(p => p.id === client.productId);
       const seller = sellers.find(s => s.id === client.sellerId);
       return {
         'Nome': client.name,
         'Cognome': client.surname,
-        'Nome Azienda': client.companyName || '',
-        'Partita IVA': client.vatNumber || '',
         'Email': client.email,
-        'Indirizzo': client.address,
         'Prodotto': product ? product.name : 'N/D',
-        'Prezzo Prodotto (€)': product ? product.price.toFixed(2) : 'N/A',
-        'Venditore': seller ? seller.name : 'N/D',
-        'Inizio Abbonamento': new Date(client.subscription.startDate).toLocaleDateString('it-IT'),
         'Fine Abbonamento': new Date(client.subscription.endDate).toLocaleDateString('it-IT'),
-        'IBAN': client.iban,
-        'Info Aggiuntive': client.otherInfo,
       };
     });
+    
+    const headers = Object.keys(dataToExport[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...dataToExport.map(row => headers.map(h => `"${(row as any)[h]}"`).join(','))
+    ].join('\n');
 
-    exportToCsv('clienti.csv', dataToExport);
-  }, [clients, products, sellers, exportToCsv]);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'clienti_crm.csv';
+    link.click();
+  }, [clients, products, sellers]);
 
   const viewTitles: Record<View, string> = {
     dashboard: 'Dashboard',
-    clients: 'Clienti',
-    sellers: 'Venditori',
-    products: 'Prodotti',
-    reports: 'Report Vendite',
-    business: 'Analisi Business',
+    clients: 'Gestione Clienti',
+    sellers: 'Area Venditori',
+    products: 'Catalogo Prodotti',
+    reports: 'Report & Statistiche',
+    business: 'Calcolatore Business',
   };
   
   const filteredAndSortedClients = useMemo(() => {
@@ -215,7 +248,6 @@ const App: React.FC = () => {
       const matchesSearch = searchTermLower === '' ||
         client.name.toLowerCase().includes(searchTermLower) ||
         client.surname.toLowerCase().includes(searchTermLower) ||
-        (client.companyName && client.companyName.toLowerCase().includes(searchTermLower)) ||
         client.email.toLowerCase().includes(searchTermLower);
 
       const matchesProduct = filterProductId === '' || client.productId === filterProductId;
@@ -237,11 +269,62 @@ const App: React.FC = () => {
         result.sort((a, b) => new Date(b.subscription.endDate).getTime() - new Date(a.subscription.endDate).getTime());
         break;
     }
-
     return result;
   }, [clients, searchTerm, filterProductId, filterSellerId, filterSubscriptionType, sortOrder]);
 
-  const mainContent = useMemo(() => {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent shadow-xl"></div>
+          <p className="mt-4 text-blue-400 font-bold tracking-widest animate-pulse">AUTENTICAZIONE...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth onSuccess={() => {}} />;
+  }
+
+  const mainContent = (() => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+               <div className="h-2 w-2 bg-blue-500 rounded-full animate-ping"></div>
+            </div>
+          </div>
+          <p className="mt-6 text-gray-500 font-semibold italic text-lg">Sincronizzazione Cloud in corso...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+          <div className="bg-white p-10 rounded-3xl border border-red-100 text-center max-w-lg shadow-2xl">
+            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <AlertTriangleIcon className="w-10 h-10 text-red-600" />
+            </div>
+            <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">Connessione Fallita</h2>
+            <p className="text-gray-600 mb-8 leading-relaxed font-medium italic">{error}</p>
+            <button 
+              onClick={() => fetchData()}
+              className="w-full bg-blue-600 text-white px-8 py-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 active:scale-95 text-lg"
+            >
+              Riconnetti Ora
+            </button>
+            <p className="mt-6 text-xs text-gray-400 font-medium">
+              Nota: Assicurati di aver configurato correttamente Supabase.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case 'dashboard':
         return <Dashboard clients={clients} products={products} />;
@@ -283,44 +366,44 @@ const App: React.FC = () => {
       default:
         return null;
     }
-  }, [currentView, clients, products, sellers, deleteClient, addProduct, updateProduct, deleteProduct, addSeller, updateSeller, deleteSeller, filteredAndSortedClients, searchTerm, filterProductId, filterSellerId, sortOrder, filterSubscriptionType]);
+  })();
 
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-800">
+    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans antialiased">
       <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-md z-10">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">{viewTitles[currentView]}</h1>
-            {currentView === 'clients' && (
-              <div className="flex items-center gap-4">
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10">
+          <div className="container mx-auto px-6 py-5 flex justify-between items-center">
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">{viewTitles[currentView]}</h1>
+            {currentView === 'clients' && !error && (
+              <div className="flex items-center gap-3">
                  <button
                     onClick={() => setImportModalOpen(true)}
-                    className="flex items-center gap-2 bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-purple-700 transition-colors duration-300"
+                    className="flex items-center gap-2 bg-purple-50 text-purple-700 font-bold py-2.5 px-5 rounded-xl border border-purple-100 hover:bg-purple-100 transition-all duration-300"
                   >
-                    <UploadIcon className="w-5 h-5" />
-                    Importa CSV
+                    <UploadIcon className="w-4 h-4" />
+                    Importa
                 </button>
                  <button
                     onClick={handleExportClients}
-                    className="flex items-center gap-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition-colors duration-300"
+                    className="flex items-center gap-2 bg-emerald-50 text-emerald-700 font-bold py-2.5 px-5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all duration-300"
                   >
-                    <DownloadIcon className="w-5 h-5" />
-                    Esporta CSV
+                    <DownloadIcon className="w-4 h-4" />
+                    Esporta
                 </button>
                 <button
                   onClick={() => setAddClientModalOpen(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300"
+                  className="flex items-center gap-2 bg-blue-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all duration-300 active:translate-y-0"
                 >
                   <PlusCircleIcon className="w-5 h-5" />
-                  Aggiungi Nuovo Cliente
+                  Nuovo Cliente
                 </button>
               </div>
             )}
           </div>
         </header>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#F8FAFC]">
+          <div className="container mx-auto px-6 py-10">
             {mainContent}
           </div>
         </main>
