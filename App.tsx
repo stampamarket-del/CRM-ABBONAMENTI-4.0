@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Client, Product, Seller } from './types';
 import ClientList from './components/ClientList';
@@ -14,28 +13,16 @@ import { PlusCircleIcon, UploadIcon } from './components/Icons';
 import ImportClientModal from './components/ImportClientModal';
 import ClientFilterBar from './components/ClientFilterBar';
 import Auth from './components/Auth';
+import { supabase } from './lib/supabase';
 
 type View = 'dashboard' | 'clients' | 'sellers' | 'products' | 'reports' | 'business';
 
 const App: React.FC = () => {
-  // Authentication State (Local)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('crm_is_authenticated') === 'true';
-  });
-
-  // Local Data State
-  const [clients, setClients] = useState<Client[]>(() => {
-    const saved = localStorage.getItem('crm_clients');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('crm_products');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [sellers, setSellers] = useState<Seller[]>(() => {
-    const saved = localStorage.getItem('crm_sellers');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
 
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
@@ -48,60 +35,126 @@ const App: React.FC = () => {
   const [filterSubscriptionType, setFilterSubscriptionType] = useState('');
   const [sortOrder, setSortOrder] = useState('expiry_desc');
 
-  // Persistence
+  // Check initial session
   useEffect(() => {
-    localStorage.setItem('crm_clients', JSON.stringify(clients));
-  }, [clients]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch data from Supabase
+  const fetchData = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      const [pRes, sRes, cRes] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('sellers').select('*'),
+        supabase.from('clients').select('*')
+      ]);
+
+      if (pRes.data) setProducts(pRes.data);
+      if (sRes.data) setSellers(sRes.data);
+      if (cRes.data) setClients(cRes.data);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    localStorage.setItem('crm_products', JSON.stringify(products));
-  }, [products]);
+    fetchData();
+  }, [fetchData]);
 
-  useEffect(() => {
-    localStorage.setItem('crm_sellers', JSON.stringify(sellers));
-  }, [sellers]);
-
-  // CRUD Operations
-  const addClient = (client: Omit<Client, 'id'>) => {
-    const newClient = { ...client, id: crypto.randomUUID() };
-    setClients(prev => [...prev, newClient]);
+  // CRUD Operations with Supabase
+  const addClient = async (client: Omit<Client, 'id'>) => {
+    const { data, error } = await supabase.from('clients').insert([client]).select();
+    if (error) {
+      alert('Errore nel salvataggio del cliente: ' + error.message);
+      return;
+    }
+    if (data) setClients(prev => [...prev, data[0]]);
   };
 
-  const deleteClient = (clientId: string) => {
-    if (!window.confirm('Eliminare il cliente?')) return;
+  const deleteClient = async (clientId: string) => {
+    if (!window.confirm('Eliminare il cliente dal database?')) return;
+    const { error } = await supabase.from('clients').delete().eq('id', clientId);
+    if (error) {
+      alert('Errore nell\'eliminazione: ' + error.message);
+      return;
+    }
     setClients(prev => prev.filter(c => c.id !== clientId));
   };
 
-  const updateClient = (updatedClient: Client) => {
+  const updateClient = async (updatedClient: Client) => {
+    const { error } = await supabase.from('clients').update(updatedClient).eq('id', updatedClient.id);
+    if (error) {
+      alert('Errore nell\'aggiornamento: ' + error.message);
+      return;
+    }
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
     setEditingClient(null);
   };
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    const newProduct = { ...product, id: crypto.randomUUID() };
-    setProducts(prev => [...prev, newProduct]);
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    const { data, error } = await supabase.from('products').insert([product]).select();
+    if (error) {
+      alert('Errore: ' + error.message);
+      return;
+    }
+    if (data) setProducts(prev => [...prev, data[0]]);
   };
 
-  const updateProduct = (updatedProduct: Product) => {
+  const updateProduct = async (updatedProduct: Product) => {
+    const { error } = await supabase.from('products').update(updatedProduct).eq('id', updatedProduct.id);
+    if (error) {
+      alert('Errore: ' + error.message);
+      return;
+    }
     setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
   };
 
-  const deleteProduct = (productId: string) => {
+  const deleteProduct = async (productId: string) => {
     if (!window.confirm('Eliminare il prodotto?')) return;
+    const { error } = await supabase.from('products').delete().eq('id', productId);
+    if (error) {
+      alert('Errore: ' + error.message);
+      return;
+    }
     setProducts(prev => prev.filter(p => p.id !== productId));
   };
 
-  const addSeller = (seller: Omit<Seller, 'id'>) => {
-    const newSeller = { ...seller, id: crypto.randomUUID() };
-    setSellers(prev => [...prev, newSeller]);
+  const addSeller = async (seller: Omit<Seller, 'id'>) => {
+    const { data, error } = await supabase.from('sellers').insert([seller]).select();
+    if (error) {
+      alert('Errore: ' + error.message);
+      return;
+    }
+    if (data) setSellers(prev => [...prev, data[0]]);
   };
 
-  const updateSeller = (updatedSeller: Seller) => {
+  const updateSeller = async (updatedSeller: Seller) => {
+    const { error } = await supabase.from('sellers').update(updatedSeller).eq('id', updatedSeller.id);
+    if (error) {
+      alert('Errore: ' + error.message);
+      return;
+    }
     setSellers(prev => prev.map(s => s.id === updatedSeller.id ? updatedSeller : s));
   };
 
-  const deleteSeller = (sellerId: string) => {
+  const deleteSeller = async (sellerId: string) => {
     if (!window.confirm('Eliminare il venditore?')) return;
+    const { error } = await supabase.from('sellers').delete().eq('id', sellerId);
+    if (error) {
+      alert('Errore: ' + error.message);
+      return;
+    }
     setSellers(prev => prev.filter(s => s.id !== sellerId));
   };
 
@@ -123,10 +176,18 @@ const App: React.FC = () => {
     });
   }, [clients, searchTerm, filterProductId, filterSellerId, filterSubscriptionType, sortOrder]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('crm_is_authenticated');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Auth onSuccess={() => setIsAuthenticated(true)} />;
@@ -170,7 +231,7 @@ const App: React.FC = () => {
               <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase">
                 {currentView === 'clients' ? 'Anagrafica' : currentView}
               </h1>
-              <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest opacity-80">Gestione Locale Abbonamenti</p>
+              <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest opacity-80">Database Supabase Cloud</p>
             </div>
             {currentView === 'clients' && (
               <div className="flex items-center gap-4">
@@ -192,7 +253,11 @@ const App: React.FC = () => {
       </div>
       {isAddClientModalOpen && <AddClientForm onAddClient={addClient} onClose={() => setAddClientModalOpen(false)} products={products} sellers={sellers} />}
       {editingClient && <EditClientForm client={editingClient} onUpdateClient={updateClient} onClose={() => setEditingClient(null)} products={products} sellers={sellers} />}
-      {isImportModalOpen && <ImportClientModal onClose={() => setImportModalOpen(false)} onImport={(c) => { setClients(prev => [...prev, ...c.map(client => ({...client, id: crypto.randomUUID()}))]) }} products={products} sellers={sellers} />}
+      {isImportModalOpen && <ImportClientModal onClose={() => setImportModalOpen(false)} onImport={async (c) => { 
+        const { error } = await supabase.from('clients').insert(c);
+        if (error) alert('Errore importazione: ' + error.message);
+        else fetchData();
+      }} products={products} sellers={sellers} />}
     </div>
   );
 };

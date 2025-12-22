@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { DashboardIcon, UsersIcon, BriefcaseIcon, PackageIcon, BarChartIcon, CalculatorIcon, XIcon } from './Icons';
 
@@ -87,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, onLogout
           <span className="ml-3">Disconnetti</span>
         </button>
         <div className="px-4 py-3 text-gray-600 text-[10px] font-bold uppercase tracking-widest text-center mt-2">
-          Versione Offline 2.5
+          Versione Cloud 3.0
         </div>
       </div>
     </div>

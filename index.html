@@ -27,6 +27,17 @@
       opacity: 1;
     }
   }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(8px); }
+    75% { transform: translateX(-8px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+  }
 </style>
 </head>
   <body class="bg-slate-50 dark:bg-slate-900">

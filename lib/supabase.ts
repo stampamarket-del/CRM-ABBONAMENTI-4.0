@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Project Supabase URL
-const supabaseUrl = 'https://eleugtfuttwbyxnlhvup.supabase.co';
+// Project Supabase URL fornito dall'utente
+const supabaseUrl = 'https://eugxpgztgjgkjrixepyz.supabase.co';
 
-// API Key obtained exclusively from environment variables as per guidelines
-const supabaseAnonKey = process.env.API_KEY || '';
+// NOTA: In questo ambiente, process.env.API_KEY è riservata esclusivamente all'integrazione con l'API Google Gemini.
+// Per la connessione a Supabase è necessario utilizzare la chiave anonima specifica del progetto fornita dall'utente.
+const supabaseAnonKey = 'sb_publishable_KsgTnYjFNZTj2ZH76Bk80A_V6x6p3IL';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -15,19 +16,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 export const checkConnection = async () => {
-  if (!supabaseAnonKey || supabaseAnonKey === 'undefined') {
-    return { ok: false, error: 'MISSING_KEY', message: 'Chiave API non configurata nell\'ambiente.' };
+  if (!supabaseAnonKey) {
+    return { ok: false, error: 'MISSING_KEY', message: 'Chiave Supabase non configurata.' };
   }
 
   try {
-    // Perform a lightweight query to verify authorization
-    const { error } = await supabase.from('clients').select('count', { count: 'exact', head: true });
+    // Test di connessione leggero su una delle tabelle principali
+    const { error } = await supabase.from('clients').select('id').limit(1);
     
     if (error) {
-      // 401 Unauthorized or specific "API key" error messages
-      if (error.code === '401' || error.message?.toLowerCase().includes('api key')) {
-        return { ok: false, error: 'INVALID_KEY', message: 'La chiave API configurata non è valida per questo progetto.' };
-      }
       return { ok: false, error: 'DB_ERROR', message: error.message };
     }
     return { ok: true };
