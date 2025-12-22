@@ -163,7 +163,6 @@ const App: React.FC = () => {
       const search = searchTerm.toLowerCase();
       const matchesSearch = c.name.toLowerCase().includes(search) || 
                           c.surname.toLowerCase().includes(search) || 
-                          (c.phone && c.phone.includes(search)) ||
                           c.email.toLowerCase().includes(search);
       const matchesProduct = filterProductId ? c.productId === filterProductId : true;
       const matchesSeller = filterSellerId ? c.sellerId === filterSellerId : true;

@@ -18,7 +18,6 @@ const EditClientForm: React.FC<EditClientFormProps> = ({ client, onUpdateClient,
     vatNumber: client.vatNumber || '',
     address: client.address,
     email: client.email,
-    phone: client.phone || '',
     iban: client.iban,
     otherInfo: client.otherInfo,
     startDate: client.subscription.startDate.split('T')[0],
@@ -37,7 +36,6 @@ const EditClientForm: React.FC<EditClientFormProps> = ({ client, onUpdateClient,
       vatNumber: client.vatNumber || '',
       address: client.address,
       email: client.email,
-      phone: client.phone || '',
       iban: client.iban,
       otherInfo: client.otherInfo,
       startDate: new Date(client.subscription.startDate).toISOString().split('T')[0],
@@ -78,7 +76,6 @@ const EditClientForm: React.FC<EditClientFormProps> = ({ client, onUpdateClient,
       vatNumber: formData.vatNumber,
       address: formData.address,
       email: formData.email,
-      phone: formData.phone,
       iban: formData.iban,
       otherInfo: formData.otherInfo,
       productId: formData.productId,
@@ -113,7 +110,6 @@ const EditClientForm: React.FC<EditClientFormProps> = ({ client, onUpdateClient,
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            <input type="tel" name="phone" placeholder="Telefono" value={formData.phone} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select name="productId" value={formData.productId} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>

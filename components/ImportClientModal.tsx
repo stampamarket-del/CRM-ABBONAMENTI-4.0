@@ -128,7 +128,6 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
           companyName: data[headerMap['nome azienda']] || '',
           vatNumber: data[headerMap['partita iva']] || '',
           email,
-          phone: data[headerMap['telefono']] || data[headerMap['phone']] || '',
           address: data[headerMap['indirizzo']] || '',
           iban: data[headerMap['iban']] || '',
           otherInfo: data[headerMap['info aggiuntive']] || '',
@@ -180,7 +179,7 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
         <div className="p-8">
           <div className="bg-slate-50 rounded-2xl p-4 mb-6 text-[11px] font-medium text-slate-500 leading-relaxed border border-slate-100">
             Header richiesti: <span className="font-black text-slate-700">nome, cognome, email, prodotto, inizio abbonamento, fine abbonamento</span>. 
-            Opzionali: <span className="font-black text-slate-700">telefono, nome azienda, partita iva, indirizzo, iban, info aggiuntive, venditore, tipo abbonamento</span>.
+            Opzionali: <span className="font-black text-slate-700">nome azienda, partita iva, indirizzo, iban, info aggiuntive, venditore, tipo abbonamento</span>.
           </div>
           
           <label htmlFor="csv-upload" className="w-full flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 rounded-[2rem] cursor-pointer hover:bg-slate-50 hover:border-blue-400 transition-all group">

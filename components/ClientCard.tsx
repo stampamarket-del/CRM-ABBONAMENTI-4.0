@@ -1,7 +1,7 @@
 import React from 'react';
 import { Client, Product, Seller, SubscriptionType } from '../types';
 import SubscriptionTimer from './SubscriptionTimer';
-import { Trash2Icon, AlertTriangleIcon, PencilIcon, ClockIcon, BriefcaseIcon, PhoneIcon } from './Icons';
+import { Trash2Icon, AlertTriangleIcon, PencilIcon, ClockIcon, BriefcaseIcon } from './Icons';
 
 interface ClientCardProps {
   client: Client;
@@ -59,12 +59,6 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onDelete, onEdit, produ
             {client.companyName && <p className="text-sm font-bold text-blue-600 uppercase tracking-tight mt-0.5">{client.companyName}</p>}
             <div className="mt-2 space-y-1">
               <a href={`mailto:${client.email}`} className="text-xs font-medium text-slate-400 hover:text-blue-600 transition-colors block">{client.email}</a>
-              {client.phone && (
-                <a href={`tel:${client.phone}`} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 transition-colors">
-                  <PhoneIcon className="w-3 h-3" />
-                  {client.phone}
-                </a>
-              )}
             </div>
           </div>
           <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
