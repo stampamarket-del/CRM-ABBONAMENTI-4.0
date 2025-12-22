@@ -13,17 +13,17 @@ const AddClientForm: React.FC<AddClientFormProps> = ({ onAddClient, onClose, pro
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
-    companyName: '',
-    vatNumber: '',
     address: '',
     email: '',
+    companyName: '',
+    vatNumber: '',
     iban: '',
     otherInfo: '',
-    startDate: '',
+    startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     productId: '',
     sellerId: '',
-    subscriptionType: '',
+    subscriptionType: 'monthly',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -35,27 +35,26 @@ const AddClientForm: React.FC<AddClientFormProps> = ({ onAddClient, onClose, pro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { name, surname, email, address, startDate, endDate, productId, subscriptionType } = formData;
-    if (!name || !surname || !email || !address || !startDate || !endDate || !productId || !subscriptionType) {
-      setError('Compilare tutti i campi obbligatori, inclusi nome, cognome, email, indirizzo, prodotto, date e tipo abbonamento.');
+    const { name, surname, email, address, startDate, endDate, productId } = formData;
+    if (!name || !surname || !email || !address || !startDate || !endDate || !productId) {
+      setError('Tutti i campi obbligatori (*) devono essere compilati.');
       return;
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (start >= end) {
-      setError("La data di fine deve essere successiva alla data di inizio.");
+      setError("La data di scadenza deve essere successiva a quella di inizio.");
       return;
     }
 
-    setError(null);
     onAddClient({
-      name: formData.name,
-      surname: formData.surname,
+      name,
+      surname,
+      email,
+      address,
       companyName: formData.companyName,
       vatNumber: formData.vatNumber,
-      address: formData.address,
-      email: formData.email,
       iban: formData.iban,
       otherInfo: formData.otherInfo,
       productId: formData.productId,
@@ -70,60 +69,80 @@ const AddClientForm: React.FC<AddClientFormProps> = ({ onAddClient, onClose, pro
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-full overflow-y-auto">
-        <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-          <h2 className="text-2xl font-bold text-gray-800">Aggiungi Nuovo Cliente</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
-            <XIcon className="w-6 h-6" />
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Nuovo Cliente</h2>
+            <p className="text-slate-400 font-medium text-sm uppercase tracking-wider mt-1">Inserimento dati anagrafici e abbonamento</p>
+          </div>
+          <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900">
+            <XIcon className="w-8 h-8" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md" role="alert">{error}</div>}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" name="name" placeholder="Nome" value={formData.name} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            <input type="text" name="surname" placeholder="Cognome" value={formData.surname} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+        
+        <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto">
+          {error && (
+            <div className="bg-red-50 border border-red-100 text-red-700 px-6 py-4 rounded-2xl font-bold flex items-center gap-3">
+              <div className="bg-red-500 text-white p-1 rounded-full"><XIcon className="w-4 h-4" /></div>
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <h3 className="text-xs font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Anagrafica Base</h3>
+              <div className="space-y-4">
+                <input type="text" name="name" placeholder="Nome *" value={formData.name} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
+                <input type="text" name="surname" placeholder="Cognome *" value={formData.surname} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
+                <input type="email" name="email" placeholder="Email Diretta *" value={formData.email} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
+                <input type="text" name="address" placeholder="Indirizzo Completo *" value={formData.address} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h3 className="text-xs font-black text-slate-300 uppercase tracking-[0.2em] ml-1">Dettagli Aziendali</h3>
+              <div className="space-y-4">
+                <input type="text" name="companyName" placeholder="Ragione Sociale" value={formData.companyName} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
+                <input type="text" name="vatNumber" placeholder="P. IVA / Cod. Fiscale" value={formData.vatNumber} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
+                <input type="text" name="iban" placeholder="Codice IBAN" value={formData.iban} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" />
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" name="companyName" placeholder="Nome Azienda (Opzionale)" value={formData.companyName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" name="vatNumber" placeholder="Partita IVA (Opzionale)" value={formData.vatNumber} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select name="productId" value={formData.productId} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-              <option value="">Seleziona Prodotto *</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name} - {p.price}€</option>)}
-            </select>
-            <select name="sellerId" value={formData.sellerId} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Seleziona Venditore</option>
-              {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-           <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Abbonamento *</label>
-              <select name="subscriptionType" value={formData.subscriptionType} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">Seleziona Tipo</option>
-                  <option value="monthly">Mensile</option>
-                  <option value="annual">Annuale</option>
-                  <option value="trial">Prova</option>
+
+          <div className="pt-8 border-t border-slate-100">
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-[0.2em] ml-1 mb-6">Configurazione Abbonamento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <select name="productId" value={formData.productId} onChange={handleChange} className="px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required>
+                <option value="">Seleziona Prodotto *</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.price}€)</option>)}
+              </select>
+              <select name="subscriptionType" value={formData.subscriptionType} onChange={handleChange} className="px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium" required>
+                <option value="monthly">Mensile</option>
+                <option value="annual">Annuale</option>
+                <option value="trial">Prova</option>
+              </select>
+               <select name="sellerId" value={formData.sellerId} onChange={handleChange} className="px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all font-medium">
+                <option value="">Nessun Venditore</option>
+                {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-          <input type="text" name="address" placeholder="Indirizzo" value={formData.address} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-          <input type="text" name="iban" placeholder="IBAN" value={formData.iban} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <textarea name="otherInfo" placeholder="Altre Informazioni" value={formData.otherInfo} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2}></textarea>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Inizio Abbonamento *</label>
-              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fine Abbonamento *</label>
-              <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 ml-1 uppercase">Data Inizio *</label>
+                <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all font-medium" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 ml-1 uppercase">Data Scadenza *</label>
+                <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 transition-all font-medium" required />
+              </div>
             </div>
           </div>
-          <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Annulla</button>
-            <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Aggiungi Cliente</button>
+
+          <div className="pt-8 flex justify-end gap-4">
+            <button type="button" onClick={onClose} className="px-8 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition-all">Annulla</button>
+            <button type="submit" className="px-12 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 transition-all active:scale-95">Salva Cliente</button>
           </div>
         </form>
       </div>

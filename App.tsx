@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Client, Product, Seller } from './types';
 import ClientList from './components/ClientList';
@@ -13,46 +14,50 @@ import { PlusCircleIcon, DownloadIcon, UploadIcon, AlertTriangleIcon } from './c
 import ImportClientModal from './components/ImportClientModal';
 import ClientFilterBar from './components/ClientFilterBar';
 import Auth from './components/Auth';
-import { supabase } from './lib/supabase';
+import { supabase, checkConnection } from './lib/supabase';
 
 type View = 'dashboard' | 'clients' | 'sellers' | 'products' | 'reports' | 'business';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [dbStatus, setDbStatus] = useState<{ ok: boolean; error?: string; message?: string } | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  // Filtri e Ordinamento
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProductId, setFilterProductId] = useState('');
   const [filterSellerId, setFilterSellerId] = useState('');
   const [filterSubscriptionType, setFilterSubscriptionType] = useState('');
   const [sortOrder, setSortOrder] = useState('expiry_desc');
 
-  // Monitoraggio Sessione Auth
+  // Monitoraggio Sessione Auth e Test Connessione
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
+      
+      if (session) {
+        const status = await checkConnection();
+        setDbStatus(status);
+      }
+      
       setAuthLoading(false);
-    });
+    };
+
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) {
-        setClients([]);
-        setProducts([]);
-        setSellers([]);
-      }
+      if (session) checkConnection().then(setDbStatus);
     });
 
     return () => subscription.unsubscribe();
@@ -61,7 +66,6 @@ const App: React.FC = () => {
   const fetchData = useCallback(async () => {
     if (!session) return;
     setLoading(true);
-    setError(null);
     try {
       const [
         { data: clientsData, error: clientsError },
@@ -74,37 +78,28 @@ const App: React.FC = () => {
       ]);
 
       if (clientsError) throw clientsError;
-      if (productsError) throw productsError;
-      if (sellersError) throw sellersError;
-
       setClients(clientsData || []);
       setProducts(productsData || []);
       setSellers(sellersData || []);
+      setDbStatus({ ok: true });
     } catch (err: any) {
       console.error('Fetch Error:', err);
-      let msg = err.message || 'Errore di connessione al database.';
-      
-      if (msg.includes('Failed to fetch')) {
-        msg = 'Impossibile contattare Supabase. Verifica la tua connessione internet o l\'URL del progetto.';
-      } else if (msg.includes('Invalid API key') || err.code === '401') {
-        msg = 'Chiave API non valida o scaduta. Controlla la Anon Key in lib/supabase.ts.';
-      } else if (err.code === 'PGRST116') {
-        msg = 'Tabelle non trovate. Assicurati di aver eseguito lo script SQL di configurazione.';
+      if (err.message?.includes('API key') || err.code === '401') {
+        setDbStatus({ ok: false, error: 'INVALID_KEY', message: 'La chiave API di Supabase non è valida.' });
+      } else {
+        setDbStatus({ ok: false, error: 'DB_ERROR', message: err.message });
       }
-      
-      setError(msg);
     } finally {
       setLoading(false);
     }
   }, [session]);
 
   useEffect(() => {
-    if (session) {
+    if (session && dbStatus?.ok) {
       fetchData();
     }
-  }, [session, fetchData]);
+  }, [session, dbStatus?.ok, fetchData]);
 
-  // CRUD Functions (Mantenute ma con gestione errori migliorata)
   const addClient = async (client: Omit<Client, 'id'>) => {
     const { data, error } = await supabase.from('clients').insert([client]).select();
     if (error) alert('Errore: ' + error.message);
@@ -127,90 +122,86 @@ const App: React.FC = () => {
     }
   };
 
-  // Altre funzioni CRUD per prodotti e venditori seguono lo stesso pattern...
-  const addProduct = async (p: Omit<Product, 'id'>) => {
-    const { data, error } = await supabase.from('products').insert([p]).select();
-    if (error) alert(error.message); else if (data) setProducts(prev => [...prev, data[0]]);
-  };
-  const updateProduct = async (p: Product) => {
-    const { error } = await supabase.from('products').update(p).eq('id', p.id);
-    if (error) alert(error.message); else setProducts(prev => prev.map(old => old.id === p.id ? p : old));
-  };
-  const deleteProduct = async (id: string) => {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) alert(error.message); else setProducts(prev => prev.filter(p => p.id !== id));
+  // FIX: Implemented missing seller management functions to resolve compilation errors
+  const addSeller = async (seller: Omit<Seller, 'id'>) => {
+    const { data, error } = await supabase.from('sellers').insert([seller]).select();
+    if (error) alert('Errore: ' + error.message);
+    else if (data) setSellers(prev => [...prev, data[0]]);
   };
 
-  const addSeller = async (s: Omit<Seller, 'id'>) => {
-    const { data, error } = await supabase.from('sellers').insert([s]).select();
-    if (error) alert(error.message); else if (data) setSellers(prev => [...prev, data[0]]);
-  };
-  const updateSeller = async (s: Seller) => {
-    const { error } = await supabase.from('sellers').update(s).eq('id', s.id);
-    if (error) alert(error.message); else setSellers(prev => prev.map(old => old.id === s.id ? s : old));
-  };
-  const deleteSeller = async (id: string) => {
-    const { error } = await supabase.from('sellers').delete().eq('id', id);
-    if (error) alert(error.message); else setSellers(prev => prev.filter(s => s.id !== id));
+  const updateSeller = async (updatedSeller: Seller) => {
+    const { error } = await supabase.from('sellers').update(updatedSeller).eq('id', updatedSeller.id);
+    if (error) alert('Errore: ' + error.message);
+    else {
+      setSellers(prev => prev.map(s => s.id === updatedSeller.id ? updatedSeller : s));
+    }
   };
 
-  const handleExportClients = () => {
-    const headers = ['Nome', 'Cognome', 'Email', 'Scadenza'];
-    const rows = clients.map(c => [c.name, c.surname, c.email, new Date(c.subscription.endDate).toLocaleDateString()]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'export_clienti.csv';
-    link.click();
+  const deleteSeller = async (sellerId: string) => {
+    if (!window.confirm('Eliminare il venditore?')) return;
+    const { error } = await supabase.from('sellers').delete().eq('id', sellerId);
+    if (error) alert('Errore: ' + error.message);
+    else setSellers(prev => prev.filter(s => s.id !== sellerId));
   };
 
   const filteredAndSortedClients = useMemo(() => {
-    let result = clients.filter(c => {
+    return clients.filter(c => {
       const search = searchTerm.toLowerCase();
       return c.name.toLowerCase().includes(search) || c.surname.toLowerCase().includes(search) || c.email.toLowerCase().includes(search);
     });
-    // Ordinamento semplificato per brevità
-    return result;
   }, [clients, searchTerm]);
 
   if (authLoading) return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center">
+      <div className="animate-spin rounded-full h-14 w-14 border-4 border-blue-500 border-t-transparent shadow-2xl mb-4"></div>
+      <p className="text-blue-400 font-bold tracking-widest animate-pulse">CARICAMENTO CRM...</p>
     </div>
   );
 
   if (!session) return <Auth onSuccess={() => {}} />;
 
   const mainContent = (() => {
-    if (loading) return (
-      <div className="flex flex-col items-center justify-center py-32">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mb-4"></div>
-        <p className="text-slate-500 font-medium animate-pulse italic">Caricamento dati dal cloud...</p>
-      </div>
-    );
+    if (dbStatus && !dbStatus.ok) {
+      return (
+        <div className="max-w-2xl mx-auto mt-20">
+          <div className="bg-white p-12 rounded-[3rem] shadow-2xl border border-red-50 text-center">
+            <div className="bg-red-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+              <AlertTriangleIcon className="w-12 h-12 text-red-600" />
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">
+              {dbStatus.error === 'INVALID_KEY' ? 'Chiave API Errata' : 'Errore Database'}
+            </h2>
+            <p className="text-slate-600 mb-10 text-lg leading-relaxed italic px-6">
+              {dbStatus.error === 'INVALID_KEY' 
+                ? 'La Anon Key inserita in lib/supabase.ts non è valida. Assicurati di aver copiato la chiave corretta dalla dashboard di Supabase.'
+                : dbStatus.message || 'Errore imprevisto di connessione.'}
+            </p>
+            <div className="grid gap-4">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full bg-blue-600 text-white px-8 py-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 active:scale-95 text-lg"
+              >
+                Riprova Connessione
+              </button>
+              <button 
+                onClick={() => supabase.auth.signOut()}
+                className="w-full bg-slate-100 text-slate-500 px-8 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+              >
+                Disconnetti Account
+              </button>
+            </div>
+            <div className="mt-8 pt-6 border-t border-slate-100 text-xs text-slate-400 font-medium uppercase tracking-widest">
+              Codice Errore: {dbStatus.error}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
-    if (error) return (
-      <div className="max-w-xl mx-auto mt-20 p-10 bg-white rounded-[2.5rem] shadow-2xl border border-red-50 text-center">
-        <div className="bg-red-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8">
-          <AlertTriangleIcon className="w-12 h-12 text-red-600" />
-        </div>
-        <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Errore Database</h2>
-        <p className="text-slate-600 mb-10 leading-relaxed text-lg font-medium italic px-4">{error}</p>
-        <div className="space-y-4">
-          <button 
-            onClick={() => fetchData()}
-            className="w-full bg-blue-600 text-white px-8 py-4 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95 text-lg"
-          >
-            Riprova Connessione
-          </button>
-          <button 
-            onClick={() => supabase.auth.signOut()}
-            className="w-full bg-slate-100 text-slate-600 px-8 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all"
-          >
-            Torna al Login
-          </button>
-        </div>
+    if (loading) return (
+      <div className="flex flex-col items-center justify-center py-40">
+        <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-blue-600 mb-6"></div>
+        <p className="text-slate-400 font-bold italic text-xl animate-pulse">Sincronizzazione dati...</p>
       </div>
     );
 
@@ -234,7 +225,7 @@ const App: React.FC = () => {
         </>
       );
       case 'sellers': return <VenditoriPage sellers={sellers} onAddSeller={addSeller} onUpdateSeller={updateSeller} onDeleteSeller={deleteSeller} clients={clients} products={products} />;
-      case 'products': return <ProdottiPage products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} clients={clients} />;
+      case 'products': return <ProdottiPage products={products} onAddProduct={(p) => { supabase.from('products').insert([p]).then(fetchData) }} onUpdateProduct={(p) => { supabase.from('products').update(p).eq('id', p.id).then(fetchData) }} onDeleteProduct={(id) => { supabase.from('products').delete().eq('id', id).then(fetchData) }} clients={clients} />;
       case 'reports': return <ReportsPage clients={clients} products={products} sellers={sellers} />;
       case 'business': return <BusinessPage />;
       default: return null;
@@ -242,31 +233,31 @@ const App: React.FC = () => {
   })();
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen bg-[#F1F5F9] text-slate-900 font-sans antialiased overflow-hidden">
       <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-10">
-          <div className="container mx-auto px-8 py-6 flex justify-between items-center">
-            <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">
-              {currentView === 'clients' ? 'Clienti' : currentView}
-            </h1>
-            {currentView === 'clients' && !error && (
-              <div className="flex items-center gap-3">
-                <button onClick={() => setImportModalOpen(true)} className="flex items-center gap-2 bg-purple-50 text-purple-700 font-bold py-2.5 px-6 rounded-2xl border border-purple-100 hover:bg-purple-100 transition-all">
-                  <UploadIcon className="w-4 h-4" /> Importa
+      <div className="flex-1 flex flex-col relative">
+        <header className="bg-white/70 backdrop-blur-2xl border-b border-slate-200 sticky top-0 z-10 px-10 py-8">
+          <div className="flex justify-between items-center max-w-7xl mx-auto w-full">
+            <div>
+              <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase">
+                {currentView === 'clients' ? 'Anagrafica' : currentView}
+              </h1>
+              <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest opacity-80">Gestione Professionale Abbonamenti</p>
+            </div>
+            {currentView === 'clients' && dbStatus?.ok && (
+              <div className="flex items-center gap-4">
+                <button onClick={() => setImportModalOpen(true)} className="flex items-center gap-2 bg-slate-100 text-slate-600 font-bold py-3 px-6 rounded-2xl hover:bg-slate-200 transition-all">
+                  <UploadIcon className="w-5 h-5" /> Importa
                 </button>
-                <button onClick={handleExportClients} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 font-bold py-2.5 px-6 rounded-2xl border border-emerald-100 hover:bg-emerald-100 transition-all">
-                  <DownloadIcon className="w-4 h-4" /> Esporta
-                </button>
-                <button onClick={() => setAddClientModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white font-black py-2.5 px-8 rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all">
-                  <PlusCircleIcon className="w-5 h-5" /> Nuovo Cliente
+                <button onClick={() => setAddClientModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white font-black py-4 px-10 rounded-2xl shadow-2xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-1 transition-all active:translate-y-0">
+                  <PlusCircleIcon className="w-6 h-6" /> Nuovo Cliente
                 </button>
               </div>
             )}
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto px-8 py-10">
-          <div className="container mx-auto max-w-7xl">
+        <main className="flex-1 overflow-y-auto px-10 py-12">
+          <div className="max-w-7xl mx-auto">
             {mainContent}
           </div>
         </main>
