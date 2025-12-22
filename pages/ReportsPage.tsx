@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Client, Product, Seller } from '../types';
-import { DownloadIcon } from '../components/Icons';
+import { DownloadIcon, BarChartIcon, CalculatorIcon, BriefcaseIcon } from '../components/Icons';
 import SellerBarChart from '../components/SellerBarChart';
 
 interface ReportsPageProps {
@@ -38,7 +38,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ clients, products, sellers })
     });
   }, [clients, products, sellers]);
 
-   const exportToCsv = (filename: string, data: object[]) => {
+  // Calcoli Globali
+  const globalStats = useMemo(() => {
+    const totalRev = sellerReports.reduce((acc, r) => acc + r.totalRevenue, 0);
+    const totalComm = sellerReports.reduce((acc, r) => acc + r.totalCommission, 0);
+    const totalSales = sellerReports.reduce((acc, r) => acc + r.totalSales, 0);
+    return {
+      totalRevenue: totalRev,
+      totalCommission: totalComm,
+      avgSale: totalSales > 0 ? totalRev / totalSales : 0,
+      totalSales
+    };
+  }, [sellerReports]);
+
+   const exportToCsv = (filename: string, data: any[]) => {
     if (!data || data.length === 0) {
       alert('Nessun dato da esportare.');
       return;
@@ -48,7 +61,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ clients, products, sellers })
 
     for (const row of data) {
       const values = headers.map(header => {
-        const value = row[header as keyof typeof row];
+        const value = row[header];
         const stringValue = value === null || value === undefined ? '' : String(value);
         const escaped = stringValue.replace(/"/g, '""');
         return `"${escaped}"`;
@@ -83,72 +96,113 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ clients, products, sellers })
     exportToCsv('report_vendite.csv', allSales);
   };
 
-
   return (
-    <div className="space-y-8">
-        <div className="flex justify-between items-center">
-            {/* The title was added to match the style of other pages */}
-            <h1 className="text-3xl font-bold text-gray-900">Report Vendite</h1>
+    <div className="space-y-12 pb-20">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Reportistica Vendite</h1>
+              <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest opacity-80">Analisi performance e provvigioni rete vendita</p>
+            </div>
             <button
                 onClick={handleExport}
-                className="flex items-center gap-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition-colors duration-300"
+                className="flex items-center gap-3 bg-emerald-600 text-white font-black py-4 px-8 rounded-2xl shadow-2xl shadow-emerald-600/30 hover:bg-emerald-700 hover:-translate-y-1 transition-all active:translate-y-0"
             >
-                <DownloadIcon className="w-5 h-5" />
-                Esporta Report CSV
+                <DownloadIcon className="w-6 h-6" />
+                <span>ESPORTA DATI CSV</span>
             </button>
         </div>
 
+        {/* Global Highlights Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><CalculatorIcon className="w-5 h-5" /></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Fatturato Totale</span>
+            </div>
+            <p className="text-3xl font-black text-slate-900 tracking-tighter">€{globalStats.totalRevenue.toLocaleString('it-IT', { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><BarChartIcon className="w-5 h-5" /></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Provvigioni</span>
+            </div>
+            <p className="text-3xl font-black text-emerald-600 tracking-tighter">€{globalStats.totalCommission.toLocaleString('it-IT', { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-slate-50 text-slate-600 rounded-xl"><BriefcaseIcon className="w-5 h-5" /></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Vendite Chiuse</span>
+            </div>
+            <p className="text-3xl font-black text-slate-900 tracking-tighter">{globalStats.totalSales}</p>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-50 text-purple-600 rounded-xl"><BarChartIcon className="w-5 h-5" /></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ticket Medio</span>
+            </div>
+            <p className="text-3xl font-black text-purple-600 tracking-tighter">€{globalStats.avgSale.toLocaleString('it-IT', { maximumFractionDigits: 0 })}</p>
+          </div>
+        </div>
+
+        {/* Visual Chart */}
         <SellerBarChart data={sellerReports} />
 
-        {sellerReports.map(report => (
-            <div key={report.id} className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-2xl font-bold text-gray-800">{report.name}</h2>
-                <p className="text-sm text-gray-500 mb-4">Report vendite e provvigioni</p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-gray-50 p-4 rounded-lg text-center">
-                        <h3 className="text-sm font-medium text-gray-500">Totale Vendite</h3>
-                        <p className="mt-1 text-2xl font-semibold text-gray-900">{report.totalSales}</p>
+        {/* Detailed Individual Reports */}
+        <div className="space-y-12">
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter border-b-4 border-blue-600 w-fit pb-1">Dettaglio Venditori</h2>
+            
+            {sellerReports.map(report => (
+                <div key={report.id} className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                    <div className="p-8 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                        <div>
+                          <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{report.name}</h2>
+                          <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Report individuale vendite e incentivi</p>
+                        </div>
+                        <div className="flex gap-4">
+                          <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200">
+                             <span className="text-[10px] font-black text-slate-400 block uppercase">Fatturato</span>
+                             <span className="text-lg font-black text-slate-900">€{report.totalRevenue.toFixed(2)}</span>
+                          </div>
+                          <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200">
+                             <span className="text-[10px] font-black text-slate-400 block uppercase">Provvigione</span>
+                             <span className="text-lg font-black text-emerald-600">€{report.totalCommission.toFixed(2)}</span>
+                          </div>
+                        </div>
                     </div>
-                     <div className="bg-green-50 p-4 rounded-lg text-center">
-                        <h3 className="text-sm font-medium text-green-700">Guadagno Generato</h3>
-                        <p className="mt-1 text-2xl font-semibold text-green-900">{report.totalRevenue.toFixed(2)}€</p>
-                    </div>
-                     <div className="bg-blue-50 p-4 rounded-lg text-center">
-                        <h3 className="text-sm font-medium text-blue-700">Provvigioni Totali</h3>
-                        <p className="mt-1 text-2xl font-semibold text-blue-900">{report.totalCommission.toFixed(2)}€</p>
+                    
+                    <div className="p-8">
+                      <div className="overflow-x-auto">
+                          {report.sales.length > 0 ? (
+                              <table className="min-w-full">
+                                  <thead>
+                                  <tr className="border-b border-slate-100">
+                                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+                                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Prodotto</th>
+                                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Prezzo</th>
+                                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Provvigione</th>
+                                  </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-50">
+                                      {report.sales.map((sale, index) => (
+                                          <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                                              <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-800">{sale.clientName}</td>
+                                              <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium">{sale.productName}</td>
+                                              <td className="px-6 py-4 whitespace-nowrap text-right font-black text-slate-900">€{sale.productPrice.toFixed(2)}</td>
+                                              <td className="px-6 py-4 whitespace-nowrap text-right text-emerald-600 font-black">€{sale.commission.toFixed(2)}</td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          ) : (
+                              <div className="py-12 text-center">
+                                <p className="text-slate-400 font-medium italic">Nessuna vendita registrata per questo periodo.</p>
+                              </div>
+                          )}
+                      </div>
                     </div>
                 </div>
-
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Dettaglio Vendite</h3>
-                 <div className="overflow-x-auto">
-                    {report.sales.length > 0 ? (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prodotto</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prezzo</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Provvigione</th>
-                            </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {report.sales.map((sale, index) => (
-                                    <tr key={index}>
-                                        <td className="px-6 py-4 whitespace-nowrap font-medium">{sale.clientName}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{sale.productName}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{sale.productPrice.toFixed(2)}€</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-green-600 font-bold">{sale.commission.toFixed(2)}€</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <p className="p-4 text-center text-gray-500">Nessuna vendita registrata per questo venditore.</p>
-                    )}
-                 </div>
-            </div>
-        ))}
+            ))}
+        </div>
     </div>
   );
 };
