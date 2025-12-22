@@ -10,13 +10,11 @@ interface ImportClientModalProps {
 }
 
 const parseDate = (dateStr: string): Date | null => {
-    // Tries to parse DD/MM/YYYY or YYYY-MM-DD
     if (!dateStr) return null;
     let date;
     if (dateStr.includes('/')) {
         const parts = dateStr.split('/');
         if (parts.length === 3) {
-            // DD/MM/YYYY
             date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
         }
     } else if (dateStr.includes('-')) {
@@ -60,13 +58,19 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
       }
 
       const lines = text.split(/\r\n|\n/);
+      if (lines.length < 2) {
+        setError("Il file non contiene dati sufficienti.");
+        setIsParsing(false);
+        return;
+      }
+
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       
       const requiredHeaders = ['nome', 'cognome', 'email', 'prodotto', 'inizio abbonamento', 'fine abbonamento'];
       const missingHeaders = requiredHeaders.filter(rh => !headers.includes(rh));
 
       if (missingHeaders.length > 0) {
-        setError(`Intestazioni CSV mancanti: ${missingHeaders.join(', ')}. Le intestazioni richieste sono: ${requiredHeaders.join(', ')}.`);
+        setError(`Intestazioni CSV mancanti: ${missingHeaders.join(', ')}.`);
         setIsParsing(false);
         return;
       }
@@ -81,7 +85,8 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
         const line = lines[i];
         if (!line.trim()) continue;
 
-        const data = line.split(',');
+        // Gestione base dei campi tra virgolette se necessario, qui split semplice
+        const data = line.split(',').map(d => d.trim().replace(/^"|"$/g, ''));
 
         const name = data[headerMap['nome']];
         const surname = data[headerMap['cognome']];
@@ -95,40 +100,35 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
           continue;
         }
 
-        const product = products.find(p => p.name.toLowerCase() === productName.trim().toLowerCase());
+        const product = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
         if (!product) {
-          errors.push(`Riga ${i + 1}: Prodotto "${productName}" non trovato.`);
+          errors.push(`Riga ${i + 1}: Prodotto "${productName}" non censito.`);
           continue;
         }
 
         const sellerName = data[headerMap['venditore']];
-        const seller = sellerName ? sellers.find(s => s.name.toLowerCase() === sellerName.trim().toLowerCase()) : undefined;
+        const seller = sellerName ? sellers.find(s => s.name.toLowerCase() === sellerName.toLowerCase()) : undefined;
 
         const startDate = parseDate(startDateStr);
         const endDate = parseDate(endDateStr);
         
         if (!startDate || !endDate || startDate >= endDate) {
-            errors.push(`Riga ${i + 1}: Date di abbonamento non valide o in formato non supportato (usare GG/MM/AAAA o AAAA-MM-GG).`);
+            errors.push(`Riga ${i + 1}: Date non valide.`);
             continue;
         }
         
-        const tipoAbbonamento = data[headerMap['tipo abbonamento']]?.trim().toLowerCase();
-        let subscriptionType: SubscriptionType = 'monthly'; // Default value
+        const tipoAbbonamento = (data[headerMap['tipo abbonamento']] || '').toLowerCase();
+        let subscriptionType: SubscriptionType = 'monthly';
+        if (tipoAbbonamento === 'annuale' || tipoAbbonamento === 'annual') subscriptionType = 'annual';
+        else if (tipoAbbonamento === 'prova' || tipoAbbonamento === 'trial') subscriptionType = 'trial';
 
-        if (tipoAbbonamento === 'annuale' || tipoAbbonamento === 'annual') {
-            subscriptionType = 'annual';
-        } else if (tipoAbbonamento === 'prova' || tipoAbbonamento === 'trial') {
-            subscriptionType = 'trial';
-        } else if (tipoAbbonamento === 'mensile' || tipoAbbonamento === 'monthly') {
-            subscriptionType = 'monthly';
-        }
-        
         clientsToImport.push({
           name,
           surname,
           companyName: data[headerMap['nome azienda']] || '',
           vatNumber: data[headerMap['partita iva']] || '',
           email,
+          phone: data[headerMap['telefono']] || data[headerMap['phone']] || '',
           address: data[headerMap['indirizzo']] || '',
           iban: data[headerMap['iban']] || '',
           otherInfo: data[headerMap['info aggiuntive']] || '',
@@ -143,7 +143,7 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
       }
       
       if(errors.length > 0) {
-          setError(errors.slice(0, 5).join('\n')); // Show first 5 errors
+          setError(`Rilevati errori in ${errors.length} righe. Esempio: ${errors[0]}`);
       } else {
           setParsedClients(clientsToImport);
       }
@@ -151,7 +151,7 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
     };
 
     reader.onerror = () => {
-        setError("Errore durante la lettura del file.");
+        setError("Errore lettura file.");
         setIsParsing(false);
     }
 
@@ -166,45 +166,52 @@ const ImportClientModal: React.FC<ImportClientModalProps> = ({ onClose, onImport
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg">
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800">Importa Clienti da CSV</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+    <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
+        <div className="p-8 border-b flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Importazione CSV</h2>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Caricamento massivo anagrafiche</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
             <XIcon className="w-6 h-6" />
           </button>
         </div>
-        <div className="p-6">
-          <p className="text-sm text-gray-600 mb-4">
-            Seleziona un file CSV con le seguenti intestazioni: <code className="bg-gray-100 p-1 rounded text-xs">nome, cognome, email, prodotto, inizio abbonamento, fine abbonamento</code>. Colonne opzionali: <code className="bg-gray-100 p-1 rounded text-xs">nome azienda, partita iva, indirizzo, iban, info aggiuntive, venditore, tipo abbonamento</code>.
-          </p>
-          <label htmlFor="csv-upload" className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-            <UploadIcon className="w-10 h-10 text-gray-400 mb-2" />
-            <span className="text-sm text-gray-600">
-              {file ? file.name : 'Clicca per caricare o trascina il file'}
+        <div className="p-8">
+          <div className="bg-slate-50 rounded-2xl p-4 mb-6 text-[11px] font-medium text-slate-500 leading-relaxed border border-slate-100">
+            Header richiesti: <span className="font-black text-slate-700">nome, cognome, email, prodotto, inizio abbonamento, fine abbonamento</span>. 
+            Opzionali: <span className="font-black text-slate-700">telefono, nome azienda, partita iva, indirizzo, iban, info aggiuntive, venditore, tipo abbonamento</span>.
+          </div>
+          
+          <label htmlFor="csv-upload" className="w-full flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 rounded-[2rem] cursor-pointer hover:bg-slate-50 hover:border-blue-400 transition-all group">
+            <div className="bg-blue-50 text-blue-600 p-4 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
+                <UploadIcon className="w-8 h-8" />
+            </div>
+            <span className="text-sm font-black text-slate-600 uppercase tracking-tight text-center">
+              {file ? file.name : 'Seleziona o trascina il file .csv'}
             </span>
             <input id="csv-upload" type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
           </label>
           
-          <div className="mt-4 min-h-[60px]">
-            {isParsing && <p className="text-blue-600">Analisi del file in corso...</p>}
-            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md text-sm whitespace-pre-wrap">{error}</div>}
+          <div className="mt-6">
+            {isParsing && <div className="flex items-center gap-3 text-blue-600 font-bold text-sm"><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div> ANALISI IN CORSO...</div>}
+            {error && <div className="bg-red-50 border border-red-100 text-red-700 p-4 rounded-xl text-xs font-bold">{error}</div>}
             {parsedClients.length > 0 && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md text-sm">
-                    <strong>{parsedClients.length}</strong> clienti pronti per l'importazione.
+                <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4 rounded-xl text-xs font-bold flex items-center justify-between">
+                    <span>PRONTO: {parsedClients.length} CLIENTI RILEVATI</span>
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                 </div>
             )}
           </div>
-
         </div>
-        <div className="p-4 bg-gray-50 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Annulla</button>
+        <div className="p-8 bg-slate-50 flex justify-end gap-4 border-t border-slate-100">
+          <button type="button" onClick={onClose} className="px-6 py-3 text-slate-500 font-bold uppercase text-xs tracking-widest hover:bg-white rounded-xl transition-all">Annulla</button>
           <button 
             type="button" 
             onClick={handleSubmit}
             disabled={isParsing || parsedClients.length === 0}
-            className="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:bg-purple-300 disabled:cursor-not-allowed">
-              Importa {parsedClients.length > 0 ? parsedClients.length : ''} Clienti
+            className="bg-blue-600 text-white font-black py-3 px-8 rounded-xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase text-xs tracking-widest">
+              Importa Dati
           </button>
         </div>
       </div>

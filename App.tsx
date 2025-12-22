@@ -55,8 +55,8 @@ const App: React.FC = () => {
     
     try {
       const [pRes, sRes, cRes] = await Promise.all([
-        supabase.from('products').select('*'),
-        supabase.from('sellers').select('*'),
+        supabase.from('products').select('*').order('name'),
+        supabase.from('sellers').select('*').order('name'),
         supabase.from('clients').select('*')
       ]);
 
@@ -72,21 +72,21 @@ const App: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  // CRUD Operations with Supabase
+  // CRUD Operations
   const addClient = async (client: Omit<Client, 'id'>) => {
     const { data, error } = await supabase.from('clients').insert([client]).select();
     if (error) {
-      alert('Errore nel salvataggio del cliente: ' + error.message);
+      alert('Errore nel salvataggio: ' + error.message);
       return;
     }
     if (data) setClients(prev => [...prev, data[0]]);
   };
 
   const deleteClient = async (clientId: string) => {
-    if (!window.confirm('Eliminare il cliente dal database?')) return;
+    if (!window.confirm('Eliminare il cliente permanentemente?')) return;
     const { error } = await supabase.from('clients').delete().eq('id', clientId);
     if (error) {
-      alert('Errore nell\'eliminazione: ' + error.message);
+      alert('Errore eliminazione: ' + error.message);
       return;
     }
     setClients(prev => prev.filter(c => c.id !== clientId));
@@ -95,7 +95,7 @@ const App: React.FC = () => {
   const updateClient = async (updatedClient: Client) => {
     const { error } = await supabase.from('clients').update(updatedClient).eq('id', updatedClient.id);
     if (error) {
-      alert('Errore nell\'aggiornamento: ' + error.message);
+      alert('Errore aggiornamento: ' + error.message);
       return;
     }
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
@@ -163,6 +163,7 @@ const App: React.FC = () => {
       const search = searchTerm.toLowerCase();
       const matchesSearch = c.name.toLowerCase().includes(search) || 
                           c.surname.toLowerCase().includes(search) || 
+                          (c.phone && c.phone.includes(search)) ||
                           c.email.toLowerCase().includes(search);
       const matchesProduct = filterProductId ? c.productId === filterProductId : true;
       const matchesSeller = filterSellerId ? c.sellerId === filterSellerId : true;
@@ -221,31 +222,43 @@ const App: React.FC = () => {
     }
   })();
 
+  const viewTitles: Record<View, string> = {
+      dashboard: 'Panoramica',
+      clients: 'Anagrafica Clienti',
+      sellers: 'Rete Venditori',
+      products: 'Listino Prodotti',
+      reports: 'Performance & Report',
+      business: 'Business Intelligence'
+  };
+
   return (
-    <div className="flex h-screen bg-[#F1F5F9] text-slate-900 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased overflow-hidden">
       <Sidebar currentView={currentView} setCurrentView={setCurrentView} onLogout={handleLogout} />
       <div className="flex-1 flex flex-col relative">
-        <header className="bg-white/70 backdrop-blur-2xl border-b border-slate-200 sticky top-0 z-10 px-10 py-8">
-          <div className="flex justify-between items-center max-w-7xl mx-auto w-full">
+        <header className="bg-white/80 backdrop-blur-3xl border-b border-slate-100 sticky top-0 z-10 px-12 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center max-w-7xl mx-auto w-full gap-4">
             <div>
-              <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase">
-                {currentView === 'clients' ? 'Anagrafica' : currentView}
+              <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
+                {viewTitles[currentView]}
               </h1>
-              <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest opacity-80">Database Supabase Cloud</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest opacity-80">Database Cloud Supabase • Sincronizzato</p>
+              </div>
             </div>
             {currentView === 'clients' && (
-              <div className="flex items-center gap-4">
-                <button onClick={() => setImportModalOpen(true)} className="flex items-center gap-2 bg-slate-100 text-slate-600 font-bold py-3 px-6 rounded-2xl hover:bg-slate-200 transition-all">
-                  <UploadIcon className="w-5 h-5" /> Importa
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button onClick={() => setImportModalOpen(true)} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-50 text-slate-500 font-black py-3 px-6 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all text-xs tracking-widest uppercase">
+                  <UploadIcon className="w-4 h-4" /> Importa
                 </button>
-                <button onClick={() => setAddClientModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white font-black py-4 px-10 rounded-2xl shadow-2xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-1 transition-all active:translate-y-0">
-                  <PlusCircleIcon className="w-6 h-6" /> Nuovo Cliente
+                <button onClick={() => setAddClientModalOpen(true)} className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-blue-600 text-white font-black py-4 px-8 rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-1 transition-all text-xs tracking-widest uppercase">
+                  <PlusCircleIcon className="w-5 h-5" /> Nuovo Cliente
                 </button>
               </div>
             )}
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto px-10 py-12">
+        <main className="flex-1 overflow-y-auto px-12 py-10">
           <div className="max-w-7xl mx-auto">
             {mainContent}
           </div>
