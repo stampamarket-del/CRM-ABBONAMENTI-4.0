@@ -1,20 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// URL del progetto Supabase
+// Project Supabase URL
 const supabaseUrl = 'https://eleugtfuttwbyxnlhvup.supabase.co';
 
-/**
- * NOTA PER L'AMMINISTRATORE:
- * Se ricevi l'errore "Invalid API key", sostituisci la stringa sotto
- * con la 'anon' key (Public) che trovi in:
- * Supabase Dashboard -> Project Settings -> API -> Project API keys (anon/public)
- */
-const supabaseAnonKey = 'sb_publishable_T4PHrFtqHgUz258h1ypR3A_4HDRPwSU_4HDRPwSU';
-
-// Helper per verificare se la chiave sembra valida (le chiavi Supabase reali sono solitamente lunghi JWT)
-const isKeyPotentiallyValid = (key: string) => {
-  return key.length > 40 && key.includes('.');
-};
+// API Key obtained exclusively from environment variables as per guidelines
+const supabaseAnonKey = process.env.API_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -25,12 +15,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 export const checkConnection = async () => {
+  if (!supabaseAnonKey || supabaseAnonKey === 'undefined') {
+    return { ok: false, error: 'MISSING_KEY', message: 'Chiave API non configurata nell\'ambiente.' };
+  }
+
   try {
+    // Perform a lightweight query to verify authorization
     const { error } = await supabase.from('clients').select('count', { count: 'exact', head: true });
+    
     if (error) {
-      // Se l'errore è 401 o contiene "API key", la chiave è errata
+      // 401 Unauthorized or specific "API key" error messages
       if (error.code === '401' || error.message?.toLowerCase().includes('api key')) {
-        return { ok: false, error: 'INVALID_KEY', message: error.message };
+        return { ok: false, error: 'INVALID_KEY', message: 'La chiave API configurata non è valida per questo progetto.' };
       }
       return { ok: false, error: 'DB_ERROR', message: error.message };
     }

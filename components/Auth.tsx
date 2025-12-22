@@ -1,10 +1,22 @@
+
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { MailIcon, AlertTriangleIcon } from './Icons';
+import { MailIcon, AlertTriangleIcon, ClockIcon, BarChartIcon, CalculatorIcon, BriefcaseIcon } from './Icons';
 
 interface AuthProps {
   onSuccess: () => void;
 }
+
+const BenefitItem: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({ icon, title, desc }) => (
+  <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-white/5 transition-colors group">
+    <div className="bg-blue-500/20 p-3 rounded-xl text-blue-400 group-hover:scale-110 transition-transform">
+      {icon}
+    </div>
+    <div>
+      <h4 className="text-white font-bold text-lg">{title}</h4>
+      <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+    </div>
+  </div>
+);
 
 const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,114 +25,159 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    try {
-      const { error: authError } = isLogin 
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
-
-      if (authError) throw authError;
-      onSuccess();
-    } catch (err: any) {
-      console.error('Auth error:', err);
-      let msg = err.message || 'Errore di autenticazione.';
-      if (msg.includes('Failed to fetch') || msg.includes('Invalid API key')) {
-        msg = 'Errore di configurazione del server (Chiave API non valida). Contatta l\'amministratore.';
+    // Simulazione processo di login locale
+    setTimeout(() => {
+      if (password.length < 6) {
+        setError('La password deve contenere almeno 6 caratteri.');
+        setLoading(false);
+        return;
       }
-      setError(msg);
-    } finally {
+      
+      localStorage.setItem('crm_is_authenticated', 'true');
+      onSuccess();
       setLoading(false);
-    }
+    }, 800);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0F172A] px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-          
-          <div className="mb-10 text-center">
-            <div className="mx-auto h-16 w-16 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 mb-6 rotate-3">
-              <span className="text-white font-black text-3xl">C</span>
+    <div className="min-h-screen flex flex-col md:flex-row bg-white overflow-hidden">
+      {/* SEZIONE SINISTRA: LOGO E BENEFICI */}
+      <div className="w-full md:w-1/2 bg-[#0F172A] p-12 lg:p-20 flex flex-col justify-between relative overflow-hidden">
+        {/* Decorazione di sfondo */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px]"></div>
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px]"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-16">
+            <div className="h-14 w-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-3">
+               <span className="font-black text-2xl text-white">C</span>
             </div>
-            <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-              {isLogin ? 'Bentornato' : 'Inizia Ora'}
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Gestione Abbonamenti</h1>
+          </div>
+
+          <div className="space-y-6 max-w-lg">
+            <h2 className="text-5xl font-black text-white leading-[1.1] mb-8">
+              Il motore per il tuo <span className="text-blue-500">Business locale.</span>
             </h2>
+            
+            <div className="space-y-2">
+              <BenefitItem 
+                icon={<ClockIcon className="w-6 h-6" />}
+                title="Monitoraggio Scadenze"
+                desc="Visualizza in tempo reale quanto manca alla fine di ogni abbonamento con timer interattivi."
+              />
+              <BenefitItem 
+                icon={<BriefcaseIcon className="w-6 h-6" />}
+                title="Gestione Venditori"
+                desc="Assegna clienti ai tuoi venditori e calcola le provvigioni in modo automatico e preciso."
+              />
+              <BenefitItem 
+                icon={<BarChartIcon className="w-6 h-6" />}
+                title="Reportistica Avanzata"
+                desc="Esporta dati in CSV e analizza le performance di vendita con grafici pronti all'uso."
+              />
+              <BenefitItem 
+                icon={<CalculatorIcon className="w-6 h-6" />}
+                title="Simulatore Business"
+                desc="Calcola margini, quote soci e costi fissi direttamente dall'area dedicata."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 pt-12 text-slate-500 text-sm font-bold tracking-widest uppercase">
+          © 2024 CRM Professional Suite • v2.5 Local
+        </div>
+      </div>
+
+      {/* SEZIONE DESTRA: LOGIN / REGISTRAZIONE */}
+      <div className="w-full md:w-1/2 flex items-center justify-center p-8 lg:p-24 bg-slate-50">
+        <div className="w-full max-w-md">
+          <div className="mb-10 text-center md:text-left">
+            <h3 className="text-4xl font-black text-slate-900 tracking-tight mb-3">
+              {isLogin ? 'Bentornato' : 'Inizia ora'}
+            </h3>
             <p className="text-slate-500 font-medium italic">
-              {isLogin ? 'Accedi al tuo CRM professionale' : 'Crea il tuo spazio di gestione'}
+              {isLogin ? 'Inserisci le tue credenziali per accedere alla dashboard.' : 'Crea il tuo spazio di lavoro professionale in pochi secondi.'}
             </p>
           </div>
 
           {error && (
-            <div className="mb-8 bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 animate-shake">
-              <AlertTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 font-semibold leading-snug">{error}</p>
+            <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 flex items-center gap-3 animate-shake">
+              <AlertTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-700 font-bold">{error}</p>
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleAuth}>
+          <form onSubmit={handleAuth} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Aziendale</label>
-                <div className="relative group">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Email Aziendale</label>
+                <div className="relative">
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-5 py-4 pl-12 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all group-hover:bg-slate-100"
-                    placeholder="email@azienda.it"
+                    className="w-full px-5 py-4 pl-12 bg-white border-2 border-slate-100 rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium"
+                    placeholder="nome@azienda.it"
                   />
-                  <MailIcon className="absolute left-4 top-4.5 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <MailIcon className="absolute left-4 top-4.5 h-5 w-5 text-slate-400" />
                 </div>
               </div>
+
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Password</label>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all group-hover:bg-slate-100"
+                  className="w-full px-5 py-4 bg-white border-2 border-slate-100 rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium"
                   placeholder="••••••••"
-                  minLength={6}
                 />
               </div>
             </div>
 
+            {isLogin && (
+              <div className="flex justify-end">
+                <button type="button" className="text-xs font-bold text-blue-600 hover:text-blue-700">Password dimenticata?</button>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-5 rounded-2xl text-white font-black text-lg bg-blue-600 hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 active:scale-[0.98] ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`w-full py-5 rounded-2xl text-white font-black text-lg bg-blue-600 hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/30 active:scale-[0.98] flex items-center justify-center gap-3 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   <span>ELABORAZIONE...</span>
-                </div>
+                </>
               ) : (
                 isLogin ? 'ACCEDI ORA' : 'REGISTRATI GRATIS'
               )}
             </button>
           </form>
 
-          <div className="mt-10 text-center">
+          <div className="mt-12 text-center pt-8 border-t border-slate-200">
+            <p className="text-slate-400 font-bold text-sm mb-4">
+              {isLogin ? 'Non hai ancora un account?' : 'Hai già un account attivo?'}
+            </p>
             <button
               onClick={() => { setIsLogin(!isLogin); setError(null); }}
-              className="text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors py-2 px-4 rounded-xl hover:bg-slate-50"
+              className="px-8 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 hover:border-slate-300 transition-all"
             >
-              {isLogin ? "Non hai un account? Registrati qui" : "Hai già un account? Torna al login"}
+              {isLogin ? "Crea nuovo account" : "Torna al Login"}
             </button>
           </div>
         </div>
-        
-        <p className="mt-8 text-center text-slate-500 text-xs font-bold uppercase tracking-widest opacity-50">
-          &copy; 2024 CRM DASHBOARD PROFESSIONAL
-        </p>
       </div>
     </div>
   );
