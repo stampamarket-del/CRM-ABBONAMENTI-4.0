@@ -9,7 +9,7 @@ import ProdottiPage from './pages/ProdottiPage';
 import VenditoriPage from './pages/VenditoriPage';
 import ReportsPage from './pages/ReportsPage';
 import BusinessPage from './pages/BusinessPage';
-import { PlusCircleIcon, UploadIcon } from './components/Icons';
+import { PlusCircleIcon, UploadIcon, XIcon } from './components/Icons';
 import ImportClientModal from './components/ImportClientModal';
 import ClientFilterBar from './components/ClientFilterBar';
 import Auth from './components/Auth';
@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [isAddClientModalOpen, setAddClientModalOpen] = useState(false);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProductId, setFilterProductId] = useState('');
@@ -231,38 +232,59 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased overflow-hidden">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} onLogout={handleLogout} />
-      <div className="flex-1 flex flex-col relative">
-        <header className="bg-white/80 backdrop-blur-3xl border-b border-slate-100 sticky top-0 z-10 px-12 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center max-w-7xl mx-auto w-full gap-4">
-            <div>
-              <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-                {viewTitles[currentView]}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest opacity-80">Database Cloud Supabase • Sincronizzato</p>
+    <div className="flex h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased overflow-hidden relative">
+      <Sidebar 
+        currentView={currentView} 
+        setCurrentView={(v) => { setCurrentView(v); setIsSidebarOpen(false); }} 
+        onLogout={handleLogout} 
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
+      />
+      
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        <header className="bg-white/80 backdrop-blur-3xl border-b border-slate-100 sticky top-0 z-10 px-4 sm:px-12 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center max-w-7xl mx-auto w-full gap-4">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <div className="flex flex-col">
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase">
+                  {viewTitles[currentView]}
+                </h1>
+                <div className="hidden sm:flex items-center gap-2 mt-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                  <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest opacity-80">Database Cloud • Sincronizzato</p>
+                </div>
               </div>
+              
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             </div>
+            
             {currentView === 'clients' && (
-              <div className="flex items-center gap-4 w-full md:w-auto">
-                <button onClick={() => setImportModalOpen(true)} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-50 text-slate-500 font-black py-3 px-6 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all text-xs tracking-widest uppercase">
-                  <UploadIcon className="w-4 h-4" /> Importa
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button onClick={() => setImportModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-50 text-slate-500 font-black py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl border border-slate-100 hover:bg-white hover:shadow-lg transition-all text-[10px] sm:text-xs tracking-widest uppercase">
+                  <UploadIcon className="w-4 h-4" /> <span className="hidden xs:inline">Importa</span>
                 </button>
-                <button onClick={() => setAddClientModalOpen(true)} className="flex-1 md:flex-none flex items-center justify-center gap-3 bg-blue-600 text-white font-black py-4 px-8 rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-1 transition-all text-xs tracking-widest uppercase">
-                  <PlusCircleIcon className="w-5 h-5" /> Nuovo Cliente
+                <button onClick={() => setAddClientModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 text-white font-black py-2.5 sm:py-4 px-4 sm:px-8 rounded-xl sm:rounded-2xl shadow-xl shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-1 transition-all text-[10px] sm:text-xs tracking-widest uppercase">
+                  <PlusCircleIcon className="w-4 h-4 sm:w-5 h-5" /> <span className="hidden xs:inline">Nuovo Cliente</span><span className="xs:hidden">Nuovo</span>
                 </button>
               </div>
             )}
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto px-12 py-10">
+        
+        <main className="flex-1 overflow-y-auto px-4 sm:px-12 py-6 sm:py-10">
           <div className="max-w-7xl mx-auto">
             {mainContent}
           </div>
         </main>
       </div>
+
       {isAddClientModalOpen && <AddClientForm onAddClient={addClient} onClose={() => setAddClientModalOpen(false)} products={products} sellers={sellers} />}
       {editingClient && <EditClientForm client={editingClient} onUpdateClient={updateClient} onClose={() => setEditingClient(null)} products={products} sellers={sellers} />}
       {isImportModalOpen && <ImportClientModal onClose={() => setImportModalOpen(false)} onImport={async (c) => { 

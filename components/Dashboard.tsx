@@ -8,13 +8,13 @@ interface DashboardProps {
 }
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
-  <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 flex items-center justify-between group hover:shadow-2xl transition-all duration-300">
-    <div>
-      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{title}</h3>
-      <p className="text-4xl font-black text-slate-900 tracking-tighter">{value}</p>
+  <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] shadow-sm sm:shadow-xl border border-slate-100 flex items-center justify-between group hover:shadow-2xl transition-all duration-300">
+    <div className="flex-1 min-w-0">
+      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1 sm:mb-2 truncate">{title}</h3>
+      <p className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tighter truncate">{value}</p>
     </div>
-    <div className={`${color} p-4 rounded-2xl shadow-lg shadow-current/10 group-hover:scale-110 transition-transform`}>
-      {icon}
+    <div className={`${color} p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg shadow-current/10 group-hover:scale-110 transition-transform flex-shrink-0 ml-4`}>
+      {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6 sm:w-8 h-8' })}
     </div>
   </div>
 );
@@ -54,34 +54,34 @@ Customer Success Team`;
   };
 
   return (
-    <div className="space-y-12 pb-12">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="Clienti Totali" value={clients.length} icon={<UsersIcon className="w-8 h-8" />} color="bg-blue-50 text-blue-600" />
-        <StatCard title="Abbonamenti Attivi" value={activeClients.length} icon={<ClockIcon className="w-8 h-8" />} color="bg-emerald-50 text-emerald-600" />
-        <StatCard title="Volume d'Affari" value={`€${totalRevenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}`} icon={<CalculatorIcon className="w-8 h-8" />} color="bg-purple-50 text-purple-600" />
+    <div className="space-y-6 sm:space-y-12 pb-12">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard title="Clienti Totali" value={clients.length} icon={<UsersIcon />} color="bg-blue-50 text-blue-600" />
+        <StatCard title="Abbonamenti Attivi" value={activeClients.length} icon={<ClockIcon />} color="bg-emerald-50 text-emerald-600" />
+        <StatCard title="Volume d'Affari" value={`€${totalRevenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}`} icon={<CalculatorIcon />} color="bg-purple-50 text-purple-600" />
       </div>
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
                 <div className="bg-orange-100 text-orange-600 p-2 rounded-xl">
-                    <AlertTriangleIcon className="w-6 h-6" />
+                    <AlertTriangleIcon className="w-5 h-5 sm:w-6 h-6" />
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Alert Scadenze (Prossimi 30gg)</h2>
+                <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Alert Scadenze</h2>
             </div>
-            <span className="bg-slate-100 text-slate-500 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">{expiringSoonClients.length} POSIZIONI</span>
+            <span className="bg-slate-100 text-slate-500 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest self-start sm:self-auto">{expiringSoonClients.length} POSIZIONI</span>
         </div>
 
-        <div className="bg-white shadow-2xl shadow-slate-200/50 rounded-[2.5rem] border border-slate-100 overflow-hidden">
+        <div className="bg-white shadow-xl sm:shadow-2xl shadow-slate-200/50 rounded-2xl sm:rounded-[2.5rem] border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
             {expiringSoonClients.length > 0 ? (
               <table className="min-w-full">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Email</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data Scadenza</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Priorità</th>
-                    <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Azioni Veloci</th>
+                    <th className="px-4 sm:px-8 py-3 sm:py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+                    <th className="px-4 sm:px-8 py-3 sm:py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Scadenza</th>
+                    <th className="hidden xs:table-cell px-4 sm:px-8 py-3 sm:py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Giorni</th>
+                    <th className="px-4 sm:px-8 py-3 sm:py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Azioni</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -92,27 +92,27 @@ Customer Success Team`;
                     
                     return (
                       <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-5">
-                            <div className="font-black text-slate-900">{client.name} {client.surname}</div>
-                            <div className="text-xs font-medium text-slate-400">{client.email}</div>
+                        <td className="px-4 sm:px-8 py-3 sm:py-5">
+                            <div className="font-black text-slate-900 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{client.name} {client.surname}</div>
+                            <div className="hidden sm:block text-[10px] font-medium text-slate-400 truncate">{client.email}</div>
                         </td>
-                        <td className="px-8 py-5">
-                            <div className="text-sm font-black text-slate-700 uppercase tracking-tight">{endDate.toLocaleDateString('it-IT')}</div>
+                        <td className="px-4 sm:px-8 py-3 sm:py-5">
+                            <div className="text-[10px] sm:text-sm font-black text-slate-700 uppercase tracking-tight">{endDate.toLocaleDateString('it-IT')}</div>
                         </td>
-                        <td className="px-8 py-5">
-                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                             isUrgent ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-orange-100 text-orange-600 border border-orange-200'
+                        <td className="hidden xs:table-cell px-4 sm:px-8 py-3 sm:py-5">
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                             isUrgent ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'
                            }`}>
-                             {daysLeft} Giorni
+                             {daysLeft} G
                            </span>
                         </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-4 sm:px-8 py-3 sm:py-5 text-right">
                            <button 
                               onClick={() => handleSendReminder(client)}
-                              className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 font-black py-2 px-5 rounded-xl text-[10px] uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95"
+                              className="inline-flex items-center justify-center gap-1 sm:gap-2 bg-blue-50 text-blue-600 font-black py-1.5 px-3 sm:py-2 sm:px-5 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95"
                             >
-                              <MailIcon className="w-3.5 h-3.5" />
-                              Rinnovo
+                              <MailIcon className="w-3 h-3 sm:w-3.5 h-3.5" />
+                              <span className="hidden xs:inline">Rinnovo</span>
                             </button>
                         </td>
                       </tr>
@@ -121,12 +121,12 @@ Customer Success Team`;
                 </tbody>
               </table>
             ) : (
-              <div className="py-20 text-center">
-                 <div className="bg-emerald-50 text-emerald-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-lg shadow-emerald-500/10">
-                    <ClockIcon className="w-8 h-8" />
+              <div className="py-12 sm:py-20 text-center px-6">
+                 <div className="bg-emerald-50 text-emerald-500 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+                    <ClockIcon className="w-6 h-6 sm:w-8 h-8" />
                  </div>
-                 <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Nessuna scadenza critica</h3>
-                 <p className="text-slate-400 text-sm font-medium mt-1 uppercase tracking-widest">Tutte le posizioni sono regolarmente coperte per i prossimi 30 giorni.</p>
+                 <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">Nessuna scadenza critica</h3>
+                 <p className="text-slate-400 text-[10px] sm:text-sm font-medium mt-1 uppercase tracking-widest">Database in ordine</p>
               </div>
             )}
           </div>
