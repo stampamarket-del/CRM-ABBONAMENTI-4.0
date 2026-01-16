@@ -1,5 +1,18 @@
 import React from 'react';
 
+export const ModernLogo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...props} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="24" fill="url(#logo_gradient)" />
+    <path d="M25 70V30L50 55L75 30V70" stroke="white" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+    <defs>
+      <linearGradient id="logo_gradient" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#3B82F6" />
+        <stop offset="1" stopColor="#1D4ED8" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 export const PlusCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" >
     <circle cx="12" cy="12" r="10" />

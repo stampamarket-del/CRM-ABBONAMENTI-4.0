@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { MailIcon, AlertTriangleIcon, ClockIcon, BarChartIcon, CalculatorIcon, BriefcaseIcon } from './Icons';
+import { MailIcon, AlertTriangleIcon, ClockIcon, BarChartIcon, CalculatorIcon, BriefcaseIcon, ModernLogo } from './Icons';
 
 interface AuthProps {
   onSuccess: () => void;
@@ -54,10 +54,8 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
         
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-16">
-            <div className="h-14 w-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-3">
-               <span className="font-black text-2xl text-white">C</span>
-            </div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Gestione Abbonamenti</h1>
+            <ModernLogo className="h-16 w-16 shadow-2xl shadow-blue-500/40 rotate-3" />
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Modern CRM Suite</h1>
           </div>
 
           <div className="space-y-6 max-w-lg">
@@ -69,7 +67,7 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
               <BenefitItem 
                 icon={<ClockIcon className="w-6 h-6" />}
                 title="Sincronizzazione Real-time"
-                desc="I tuoi dati sono sempre aggiornati su tutti i dispositivi grazie al database Supabase."
+                desc="I tuoi dati sono sempre aggiornati su tutti i dispositivi grazie al database modern web solutions."
               />
               <BenefitItem 
                 icon={<BriefcaseIcon className="w-6 h-6" />}
@@ -79,7 +77,7 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
               <BenefitItem 
                 icon={<BarChartIcon className="w-6 h-6" />}
                 title="Infrastruttura Scalabile"
-                desc="Gestisci da dieci a migliaia di abbonamenti senza cali di performance."
+                desc="Gestisci da dieci a migliaia di clienti senza cali di performance."
               />
               <BenefitItem 
                 icon={<CalculatorIcon className="w-6 h-6" />}
@@ -91,7 +89,7 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
         </div>
 
         <div className="relative z-10 pt-12 text-slate-500 text-sm font-bold tracking-widest uppercase">
-          © 2024 CRM Professional Suite • v3.0 Supabase
+          CRM Professional Suite • Modern Web Solutions
         </div>
       </div>
 

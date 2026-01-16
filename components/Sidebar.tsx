@@ -1,5 +1,5 @@
 import React from 'react';
-import { DashboardIcon, UsersIcon, BriefcaseIcon, PackageIcon, BarChartIcon, CalculatorIcon, XIcon } from './Icons';
+import { DashboardIcon, UsersIcon, BriefcaseIcon, PackageIcon, BarChartIcon, CalculatorIcon, XIcon, ModernLogo } from './Icons';
 
 type View = 'dashboard' | 'clients' | 'sellers' | 'products' | 'reports' | 'business';
 
@@ -32,10 +32,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, onLogout
   return (
     <div className="w-64 bg-slate-900 text-white flex flex-col p-6 shadow-2xl z-20">
       <div className="flex items-center gap-3 mb-10 px-2">
-        <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-600/40">
-           <span className="font-bold text-lg text-white">C</span>
-        </div>
-        <span className="text-xl font-black tracking-tight uppercase">CRM PROFESSIONAL</span>
+        <ModernLogo className="h-10 w-10 shadow-lg shadow-blue-600/20" />
+        <span className="text-xl font-black tracking-tight uppercase leading-tight">Modern CRM Suite</span>
       </div>
       
       <nav className="flex-1 flex flex-col space-y-1">
